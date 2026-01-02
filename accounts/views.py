@@ -2,6 +2,16 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from products.models import Product
+
+def home(request):
+    products = Product.objects.all()[:8]  # latest 8 products
+    return render(request,'accounts/home.html', {'products': products})
+
+@login_required
+def dashboard(request):
+    return render(request, 'accounts/dashboard.html')
 
 
 def signup_view(request):
@@ -27,7 +37,7 @@ def signup_view(request):
         user.save()
 
         messages.success(request, 'Account created successfully')
-        return redirect('login')
+        return redirect('product/')
 
     return render(request, 'accounts/signup.html')
 
@@ -41,13 +51,18 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            return redirect('login')  # temporary redirect
+
+            # Redirect staff/admin users to admin panel
+            if user.is_staff or user.is_superuser:
+                return redirect('/admin/')  # Django admin panel URL
+            else:
+                return redirect('dashboard')  # normal users go to dashboard
+
         else:
             messages.error(request, 'Invalid credentials')
             return redirect('login')
 
     return render(request, 'accounts/login.html')
-
 
 def logout_view(request):
     logout(request)
